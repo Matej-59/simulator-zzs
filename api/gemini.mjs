@@ -44,6 +44,25 @@ function retryable(error) {
   return ['TypeError', 'TimeoutError', 'AbortError'].includes(error?.name);
 }
 
+async function readAnswer(result, mode) {
+  const data = await result.json().catch(error => {
+    if (error instanceof SyntaxError) return null;
+    throw error;
+  });
+  const text = data?.candidates?.[0]?.content?.parts
+    ?.filter(part => !part.thought).map(part => part.text || '').join('').trim();
+  if (!text) return null;
+  try {
+    const value = JSON.parse(text.replace(/^```(?:json)?\s*([\s\S]+?)\s*```$/i, '$1'));
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+    if (mode === 'dialogue' && (typeof value.reply !== 'string' || !value.reply.trim())) return null;
+    if (mode === 'commands' && !Array.isArray(value.ids)) return null;
+    return value;
+  } catch {
+    return null;
+  }
+}
+
 export default async function handler(request, response) {
   response.setHeader('Cache-Control', 'no-store');
 
@@ -63,8 +82,9 @@ export default async function handler(request, response) {
   }
 
   const model = process.env.GEMINI_MODEL?.trim() || 'gemini-3.1-flash-lite';
-  const dialogue = request.body?.mode === 'dialogue';
-  const commands = request.body?.mode === 'commands';
+  const mode = request.body?.mode;
+  const dialogue = mode === 'dialogue';
+  const commands = mode === 'commands';
   const commandSchema = {
     type: 'OBJECT',
     properties: { ids: { type: 'ARRAY', items: { type: 'STRING' } } },
@@ -75,19 +95,21 @@ export default async function handler(request, response) {
     temperature: 0.2,
     maxOutputTokens: 4096,
     ...(dialogue ? dialogueConfig : {}),
-    ...(commands ? { responseSchema: commandSchema, maxOutputTokens: 256 } : {}),
+    ...(commands ? { responseSchema: commandSchema, maxOutputTokens: 512 } : {}),
   };
   const fallbackModel = model === 'gemini-2.5-flash-lite' ? 'gemini-3.1-flash-lite' : 'gemini-2.5-flash-lite';
   try {
-    let result;
+    let result, answer;
     try {
       result = await generate(model, secret, prompt, config, 9_000);
+      if (result.ok) answer = await readAnswer(result, mode);
     } catch (error) {
       if (!retryable(error)) throw error;
     }
-    if (!result || [408, 500, 502, 503, 504].includes(result.status)) {
-      if (result) await result.body?.cancel().catch(() => {});
+    if (!result || (result.ok && !answer) || [408, 500, 502, 503, 504].includes(result.status)) {
+      if (result && !result.bodyUsed) await result.body?.cancel().catch(() => {});
       result = await generate(fallbackModel, secret, prompt, config, 13_000);
+      if (result.ok) answer = await readAnswer(result, mode);
     }
     if (result.status === 429) {
       return response.status(429).json({ error: 'Gemini vyčerpalo limit. Zkus to později.' });
@@ -116,17 +138,8 @@ export default async function handler(request, response) {
       return response.status(502).json({ error: 'Gemini odmítlo požadavek (HTTP ' + result.status + ').' });
     }
 
-    const data = await result.json();
-    const text = data.candidates?.[0]?.content?.parts
-      ?.filter(part => !part.thought).map(part => part.text || '').join('');
-    if (!text) {
-      return response.status(502).json({ error: 'Gemini nevrátilo odpověď.' });
-    }
-    let answer;
-    try {
-      answer = JSON.parse(text);
-    } catch {
-      return response.status(502).json({ error: 'Gemini vrátilo odpověď v nečitelném formátu. Zkus zprávu odeslat znovu.' });
+    if (!answer) {
+      return response.status(502).json({ error: 'Gemini nevrátilo čitelnou odpověď. Zkus zprávu odeslat znovu.' });
     }
     return response.status(200).json({ answer });
   } catch (error) {
