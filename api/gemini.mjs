@@ -65,6 +65,9 @@ async function readAnswer(result, mode) {
 
 export default async function handler(request, response) {
   response.setHeader('Cache-Control', 'no-store');
+  if (process.env.VERCEL_GIT_COMMIT_SHA) {
+    response.setHeader('X-Simulator-Revision', process.env.VERCEL_GIT_COMMIT_SHA);
+  }
 
   if (request.method !== 'POST') {
     response.setHeader('Allow', 'POST');

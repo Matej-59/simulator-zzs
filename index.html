@@ -389,9 +389,25 @@ async function intervene(input) {
   ['zahajim ventilaci', 'ventilation'],
  ]);
  const phrases = normalizeCzech(input).replace(/[.!]+$/g, '')
-  .split(/\s*(?:;|\n|\ba pak\b|\ba\b)\s*/).map(phrase => local.get(phrase.trim()));
- const commands = phrases.every(Boolean)
-  ? [...new Set(phrases)] : await recognizeCommands(input, interventionCommands);
+  .split(/\s*(?:;|\n|\ba pak\b|\ba\b)\s*/).map(phrase => phrase.trim());
+ const exact = phrases.map(phrase => local.get(phrase));
+ let commands;
+ if (exact.every(Boolean)) {
+  commands = [...new Set(exact)];
+ } else {
+  try {
+   commands = await recognizeCommands(input, interventionCommands);
+  } catch (error) {
+   const alternatives = phrases.map((phrase, index) => {
+    if (exact[index]) return exact[index];
+    if (/^(?:zacinam (?:mu )?davat|davam(?: mu)?|podavam(?: mu)?) kyslik$/.test(phrase)) return 'oxygenOn';
+    if (/^(?:prikryvam (?:ho|pacienta) dekou|davam pres nej deku)$/.test(phrase)) return 'warming';
+    return null;
+   });
+   if (!alternatives.every(Boolean)) throw error;
+   commands = [...new Set(alternatives)];
+  }
+ }
  const available = commands.filter(id => id !== 'unsupported');
  if (available.length &&
      !confirm('Provést rozpoznané intervence?\n\n' + available.map(id => interventionCommands[id]).join('\n'))) {
