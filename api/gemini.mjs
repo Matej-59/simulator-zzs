@@ -57,6 +57,9 @@ async function readAnswer(result, mode) {
     if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
     if (mode === 'dialogue' && (typeof value.reply !== 'string' || !value.reply.trim())) return null;
     if (mode === 'commands' && !Array.isArray(value.ids)) return null;
+    if (mode === 'sequence' && !Array.isArray(value.steps)) return null;
+    if (mode === 'consultation' && (typeof value.reply !== 'string' || !value.reply.trim())) return null;
+    if (mode === 'debrief' && (typeof value.report !== 'string' || !value.report.trim())) return null;
     return value;
   } catch {
     return null;
@@ -97,17 +100,31 @@ export default async function handler(request, response) {
   const mode = request.body?.mode;
   const dialogue = mode === 'dialogue';
   const commands = mode === 'commands';
+  const sequence = mode === 'sequence';
+  const sequenceSchema = {
+    type: 'OBJECT',
+    properties: {
+      steps: {type:'ARRAY', items:{
+        type:'OBJECT', properties:{index:{type:'INTEGER'},id:{type:'STRING'}}, required:['index','id'],
+      }},
+    },
+    required: ['steps'],
+  };
   const commandSchema = {
     type: 'OBJECT',
     properties: { ids: { type: 'ARRAY', items: { type: 'STRING' } } },
     required: ['ids'],
   };
+  const shortResponse = mode === 'consultation' || mode === 'debrief';
+  const narrativeKey = mode === 'debrief' ? 'report' : 'reply';
   const config = {
     responseMimeType: 'application/json',
     temperature: 0.2,
     maxOutputTokens: 4096,
     ...(dialogue ? dialogueConfig : {}),
     ...(commands ? { responseSchema: commandSchema, maxOutputTokens: 512 } : {}),
+    ...(sequence ? { responseSchema: sequenceSchema, maxOutputTokens: 768 } : {}),
+    ...(shortResponse ? {responseSchema:{type:'OBJECT',properties:{[narrativeKey]:{type:'STRING'}},required:[narrativeKey]},maxOutputTokens: mode === 'debrief' ? 2500 : 512} : {}),
   };
   const fallbackModel = process.env.GEMINI_FALLBACK_MODEL?.trim() || model;
   try {
