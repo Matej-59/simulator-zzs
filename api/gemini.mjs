@@ -1,3 +1,26 @@
+const dialogueConfig = {
+  maxOutputTokens: 512,
+  thinkingConfig: { thinkingLevel: 'MINIMAL' },
+  responseSchema: {
+    type: 'OBJECT',
+    properties: {
+      reply: { type: 'STRING' },
+      history: {
+        type: 'ARRAY',
+        items: {
+          type: 'OBJECT',
+          properties: {
+            group: { type: 'STRING', enum: ['S', 'A', 'M', 'P', 'L', 'E'] },
+            value: { type: 'STRING' },
+          },
+          required: ['group', 'value'],
+        },
+      },
+    },
+    required: ['reply', 'history'],
+  },
+};
+
 export default async function handler(request, response) {
   response.setHeader('Cache-Control', 'no-store');
 
@@ -17,6 +40,8 @@ export default async function handler(request, response) {
   }
 
   const model = process.env.GEMINI_MODEL?.trim() || 'gemini-3.1-flash-lite';
+  const dialogue = request.body?.mode === 'dialogue';
+  const { thinkingConfig, ...dialogueSchema } = dialogueConfig;
   try {
     const result = await fetch(
       'https://generativelanguage.googleapis.com/v1beta/models/' +
@@ -30,6 +55,8 @@ export default async function handler(request, response) {
             responseMimeType: 'application/json',
             temperature: 0.2,
             maxOutputTokens: 4096,
+            ...(dialogue ? dialogueSchema : {}),
+            ...(dialogue && model === 'gemini-3.1-flash-lite' ? { thinkingConfig } : {}),
           },
         }),
         signal: AbortSignal.timeout(25_000),
@@ -65,8 +92,17 @@ export default async function handler(request, response) {
     if (!text) {
       return response.status(502).json({ error: 'Gemini nevrátilo odpověď.' });
     }
-    return response.status(200).json({ answer: JSON.parse(text) });
-  } catch {
-    return response.status(502).json({ error: 'Gemini neposkytlo platnou odpověď včas.' });
+    let answer;
+    try {
+      answer = JSON.parse(text);
+    } catch {
+      return response.status(502).json({ error: 'Gemini vrátilo odpověď v nečitelném formátu. Zkus zprávu odeslat znovu.' });
+    }
+    return response.status(200).json({ answer });
+  } catch (error) {
+    if (error.name === 'TimeoutError' || error.name === 'AbortError') {
+      return response.status(504).json({ error: 'Gemini nestihlo odpovědět. Zkus zprávu odeslat znovu.' });
+    }
+    return response.status(502).json({ error: 'Spojení s Gemini selhalo. Zkus zprávu odeslat znovu.' });
   }
 }
