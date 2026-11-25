@@ -97,7 +97,7 @@ export default async function handler(request, response) {
     ...(dialogue ? dialogueConfig : {}),
     ...(commands ? { responseSchema: commandSchema, maxOutputTokens: 512 } : {}),
   };
-  const fallbackModel = model === 'gemini-2.5-flash-lite' ? 'gemini-3.1-flash-lite' : 'gemini-2.5-flash-lite';
+  const fallbackModel = process.env.GEMINI_FALLBACK_MODEL?.trim() || model;
   try {
     let result, answer;
     try {
