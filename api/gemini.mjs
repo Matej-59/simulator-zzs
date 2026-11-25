@@ -41,6 +41,12 @@ export default async function handler(request, response) {
 
   const model = process.env.GEMINI_MODEL?.trim() || 'gemini-3.1-flash-lite';
   const dialogue = request.body?.mode === 'dialogue';
+  const commands = request.body?.mode === 'commands';
+  const commandSchema = {
+    type: 'OBJECT',
+    properties: { ids: { type: 'ARRAY', items: { type: 'STRING' } } },
+    required: ['ids'],
+  };
   const { thinkingConfig, ...dialogueSchema } = dialogueConfig;
   try {
     const result = await fetch(
@@ -56,7 +62,8 @@ export default async function handler(request, response) {
             temperature: 0.2,
             maxOutputTokens: 4096,
             ...(dialogue ? dialogueSchema : {}),
-            ...(dialogue && model === 'gemini-3.1-flash-lite' ? { thinkingConfig } : {}),
+            ...(commands ? { responseSchema: commandSchema, maxOutputTokens: 256 } : {}),
+            ...((dialogue || commands) && model === 'gemini-3.1-flash-lite' ? { thinkingConfig } : {}),
           },
         }),
         signal: AbortSignal.timeout(25_000),
