@@ -1,4 +1,8 @@
-<!doctype html><html lang="cs"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PNP | Simulátor výjezdu</title><style>*{box-sizing:border-box}body{margin:0;background:#eef2f5;color:#172733;font:16px system-ui}header{background:#172d40;color:white;padding:18px 5%;display:flex;justify-content:space-between}main{max-width:1250px;margin:auto;padding:20px;display:grid;grid-template-columns:1.3fr 1fr;gap:18px}section{background:white;border:1px solid #d5dfe6;border-radius:12px;padding:18px;margin-bottom:14px}h2,h3{margin:0 0 12px}button{background:#245b80;color:white;border:0;border-radius:7px;padding:12px;cursor:pointer}button:disabled{opacity:.5}input,textarea,select{width:100%;padding:12px;border:1px solid #aabac5;border-radius:7px;font:inherit}#log{height:390px;overflow:auto;background:#f5f7f9;padding:12px;border-radius:8px}.msg{padding:10px;margin:8px 0;background:white;border-left:3px solid #7393a9;white-space:pre-wrap}.user{border-color:#245b80;background:#e4eef6}.monitor{background:#101719;color:#dbe5e8;border:8px solid #34434b;border-radius:12px;padding:14px}.nums{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.nums b{display:block;font: bold 30px monospace}.nums small{color:#b4c2c7}canvas{width:100%;height:120px}#status{line-height:1.6}details{margin-top:10px}label{display:block;margin:10px 0 4px} .red{color:#b42318;font-weight:bold} .muted{color:#607584;font-size:13px}@media(max-width:800px){main{grid-template-columns:1fr}} </style><header><b>PNP / SIMULACE 02</b><span id="clock">00:00</span></header><main><div><section id="dispatch"><h2><span class="red">N1</span> · DOPRAVNÍ NEHODA</h2><p>RZP · venkovní prostředí · silnice mimo obec</p><p>Osobní automobil narazil do stromu. Jeden muž, přibližně 35 let, mimo vozidlo, reaguje na oslovení. Volající udává krvácení z nohy a obtížné dýchání. HZS a PČR na cestě.</p><p class="red">RV momentálně nedostupné – jiný zásah.</p><button id="start">Přijmout výzvu a přijet na místo</button></section><section id="work" hidden><h3>Průběh zásahu</h3><div id="log" aria-live="polite"></div><form id="cmd"><label for="entry">Co provedeš?</label><div style="display:flex;gap:8px"><input id="entry" autocomplete="off" placeholder="Napiš vlastní postup…"><button>Provést</button></div></form><details><summary>Nápověda k ovládání</summary><p>Piš jednotlivé konkrétní úkony, např. „kontroluji bezpečnost“, „vyšetřuji dýchací cesty“, „měřím tlak“, „žádám LZS“. Lze zadat více úkonů oddělených středníkem. Neznámý příkaz nezmění stav. Příkaz „čekám 1 minutu“ posune čas. Nejde o AI.</p></details><button style="margin-top:12px" id="finish">Přejít k předání ATMIST</button></section><section id="handover" hidden><h3>Předání pacienta</h3><form id="atm"><div id="fields"></div><button>Ukončit a vyhodnotit</button></form></section><section id="report" hidden></section></div><div><section><h3>Aktuální status pacienta</h3><div id="status">Čeká se na příjezd.</div><p id="resources" class="muted"></p></section><div class="monitor"><small>SIMULOVANÝ MONITOR · II</small><canvas id="ecg" width="700" height="150"></canvas><div class="nums"><div style="color:#68f28c"><small>HR / min</small><b id="hr">--</b></div><div style="color:#60d9fa"><small>SpO₂ %</small><b id="spo">--</b></div><div><small>NIBP mmHg</small><b id="bp">--</b></div><div><small>DF / min</small><b id="rr">--</b></div><div><small>GCS</small><b id="gcs">--</b></div><div><small>EtCO₂</small><b>--</b></div></div><p class="muted" id="rhythm">Monitor nepřipojen</p><button id="sound">Zapnout zvuk monitoru</button></div><section style="margin-top:14px"><h3>Záznam péče</h3><div id="care" class="muted">Zatím žádné úkony.</div></section><p class="muted">Výukový prototyp. Modelové hodnoty, syntetické zvuky a schematické EKG. Není určen pro klinické rozhodování; před výukovým nasazením vyžaduje odbornou validaci a sladění s místními postupy.</p></div></main><script>
+<!doctype html><html lang="cs"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PNP | Simulátor výjezdu</title><style>*{box-sizing:border-box}body{margin:0;background:#eef2f5;color:#172733;font:16px system-ui}header{background:#172d40;color:white;padding:18px 5%;display:flex;justify-content:space-between}main{max-width:1250px;margin:auto;padding:20px;display:grid;grid-template-columns:1.3fr 1fr;gap:18px}section{background:white;border:1px solid #d5dfe6;border-radius:12px;padding:18px;margin-bottom:14px}h2,h3{margin:0 0 12px}button{background:#245b80;color:white;border:0;border-radius:7px;padding:12px;cursor:pointer}button:disabled{opacity:.5}input,textarea,select{width:100%;padding:12px;border:1px solid #aabac5;border-radius:7px;font:inherit}#log{height:390px;overflow:auto;background:#f5f7f9;padding:12px;border-radius:8px}.msg{padding:10px;margin:8px 0;background:white;border-left:3px solid #7393a9;white-space:pre-wrap}.user{border-color:#245b80;background:#e4eef6}.monitor{background:#101719;color:#dbe5e8;border:8px solid #34434b;border-radius:12px;padding:14px}.nums{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.nums b{display:block;font: bold 30px monospace}.nums small{color:#b4c2c7}canvas{width:100%;height:120px}#status{line-height:1.6}details{margin-top:10px}label{display:block;margin:10px 0 4px} .red{color:#b42318;font-weight:bold} .muted{color:#607584;font-size:13px}@media(max-width:800px){main{grid-template-columns:1fr}} </style><header><b>PNP / SIMULACE 02</b><span id="clock">00:00</span></header><main><div><section id="dispatch"><h2><span class="red">N1</span> · DOPRAVNÍ NEHODA</h2><p>RZP · venkovní prostředí · silnice mimo obec</p><p>Osobní automobil narazil do stromu. Jeden muž, přibližně 35 let, mimo vozidlo, reaguje na oslovení. Volající udává krvácení z nohy a obtížné dýchání. HZS a PČR na cestě.</p><p class="red">RV momentálně nedostupné – jiný zásah.</p><button id="start">Přijmout výzvu a přijet na místo</button></section><section id="work" hidden><h3>Průběh zásahu</h3>
+<button type="button" id="enable-ai">Zapnout AI</button>
+<p id="ai-status" class="muted" role="status">AI běží v prohlížeči. První spuštění stáhne model a vyžaduje WebGPU.</p><div id="log" aria-live="polite"></div><form id="cmd"><div id="ai-controls" hidden><label for="ai-mode">Režim vstupu</label>
+<select id="ai-mode"><option value="rules">Přímý příkaz</option><option value="interpret">Rozpoznání úkonů pomocí AI</option><option value="patient">Rozhovor s pacientem</option><option value="dispatch">Rozhovor se ZOS</option></select></div>
+<label for="entry">Pokyn nebo zpráva</label><div style="display:flex;gap:8px"><input id="entry" maxlength="4000" autocomplete="off" placeholder="Napiš vlastní postup…"><button>Provést</button></div></form><details><summary>Nápověda k ovládání</summary><p>Piš jednotlivé konkrétní úkony, např. „kontroluji bezpečnost“, „vyšetřuji dýchací cesty“, „měřím tlak“, „žádám LZS“. Lze zadat více úkonů oddělených středníkem. Neznámý příkaz nezmění stav. Příkaz „čekám 1 minutu“ posune čas. Pro volnější formulace vyber rozpoznání pomocí AI a zkontroluj navržené úkony před potvrzením. Léčebné úkony zadávej jako přímé příkazy.</p></details><button style="margin-top:12px" id="finish">Přejít k předání ATMIST</button></section><section id="handover" hidden><h3>Předání pacienta</h3><form id="atm"><div id="fields"></div><button>Ukončit a vyhodnotit</button></form></section><section id="report" hidden></section></div><div><section><h3>Aktuální status pacienta</h3><div id="status">Čeká se na příjezd.</div><p id="resources" class="muted"></p></section><div class="monitor"><small>SIMULOVANÝ MONITOR · II</small><canvas id="ecg" width="700" height="150"></canvas><div class="nums"><div style="color:#68f28c"><small>HR / min</small><b id="hr">--</b></div><div style="color:#60d9fa"><small>SpO₂ %</small><b id="spo">--</b></div><div><small>NIBP mmHg</small><b id="bp">--</b></div><div><small>DF / min</small><b id="rr">--</b></div><div><small>GCS</small><b id="gcs">--</b></div><div><small>EtCO₂</small><b>--</b></div></div><p class="muted" id="rhythm">Monitor nepřipojen</p><button id="sound">Zapnout zvuk monitoru</button></div><section style="margin-top:14px"><h3>Záznam péče</h3><div id="care" class="muted">Zatím žádné úkony.</div></section><p class="muted">Výukový prototyp. Modelové hodnoty, syntetické zvuky a schematické EKG. Není určen pro klinické rozhodování; před výukovým nasazením vyžaduje odbornou validaci a sladění s místními postupy.</p></div></main><script src="./simulator-ai.js"></script><script>
 const $=id=>document.getElementById(id), norm=s=>s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');let t=0,started=false,ended=false, bleeding=true, oxygen=false, decompressed=false, warm=false, monitor=false, sat=false, pressure=false, counted=false, neuro=false, hr=132,spo=83,sbp=92,rr=34,gcs=14,rv=null,lzs=null,destination='',transport='',access=false, fluid=false, txa=false, sound=false, audio, lastBeat=0;const done=new Set(), events=[];function stamp(){return String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0')}function log(s,u=false){let d=document.createElement('div');d.className='msg'+(u?' user':'');d.textContent=(u?'RZP':'SIM · '+stamp())+'\n'+s;$('log').append(d);$('log').scrollTop=$('log').scrollHeight}function mark(k,s){done.add(k);events.push(stamp()+' '+s);$('care').textContent=events.join(' · ')}function advance(sec){for(let i=0;i<sec;i+=5){t+=Math.min(5,sec-i);sbp+=bleeding?-.18:-.015;if(!decompressed)sbp-=.12;else if(!bleeding&&sbp<100)sbp+=.13;if(fluid&&!bleeding&&sbp<100)sbp+=.08;let target=decompressed?(oxygen?97:93):(oxygen?88:78);spo+=(target-spo)*.045;hr+=(Math.min(165,Math.max(98,130+(92-sbp)*.8+(90-spo)*.8))-hr)*.025;rr+=( (decompressed?24:36)-rr)*.04;gcs=sbp<65||spo<78?11:sbp<80?13:14;if(rv!==null&&t>=rv&&!done.has('rvArr')){mark('rvArr','RV na místě');log('RV dorazilo na místo. Lékař přebírá lékařské intervence, koordinujte další péči.')}if(lzs!==null&&t>=lzs&&!done.has('lzsArr')){mark('lzsArr','LZS na místě');log('LZS přistála na ploše zajištěné HZS. Posádka je připravena k předání.')}}render()}
 function render(){$('clock').textContent=stamp();$('hr').textContent=monitor?Math.round(hr):'--';$('spo').textContent=sat?Math.round(spo):'--';$('bp').textContent=pressure?Math.round(sbp)+'/'+Math.round(sbp*.65):'--';$('rr').textContent=counted?Math.round(rr):'--';$('gcs').textContent=neuro?gcs:'--';$('rhythm').textContent=monitor?'Sinusová tachykardie · schematická křivka':'Monitor nepřipojen';if(started)$('status').textContent=(gcs<13?'Pacient je somnolentní, odpovídá zpomaleně.':decompressed?'Pacient komunikuje v krátkých větách, dechová práce je menší.':'Pacient je neklidný, bledý, mluví jednotlivými slovy, výrazná dechová práce.')+' '+(bleeding?'Z levého stehna nadále výrazně krvácí.':'Zevní krvácení je kontrolováno.')+(sbp<80?' Periferie chladná, stav se zhoršuje.':'');$('resources').textContent='HZS a PČR na místě. '+(rv===null?'RV nedostupné.':t>=rv?'RV na místě.':'RV dojezd '+Math.ceil((rv-t)/60)+' min. ') +(lzs===null?' LZS nevyžádána.':t>=lzs?' LZS na místě.':' LZS přílet '+Math.ceil((lzs-t)/60)+' min.')}
 $('start').onclick=()=>{started=true;$('start').disabled=true;$('work').hidden=false;log('HZS a PČR jsou na místě. Muž leží na krajnici vedle automobilu, reaguje na oslovení. Je bledý, opocený, výrazně dušný. Na levém stehně je prosáklý oděv a pod pacientem krev.');render()};
@@ -56,7 +60,93 @@ function action(raw){
 }
 function parseCommands(v){return norm(v).split(/;|\n|\s+(?:a pak|a nasledne|potom|nasledne)\s+|\s+a\s+(?=(?:zmerim|merim|podam|provedu|vysetrim|vysetruji|pripojim|nasadim|zavedu|kontroluji|pozadam|volam|prilozim)\b)/i).flatMap(x=>x.split(/,\s*(?=(?:zmerim|podam|provedu|vysetrim|pripojim|nasadim|zavedu)\b)/i)).filter(x=>x.trim());}
 
-$('cmd').onsubmit=e=>{e.preventDefault();if(ended)return;let v=$('entry').value.trim();if(!v)return;$('entry').value='';log(v,true);parseCommands(v).forEach(action)};
-const labels=['A – Age / věk','T – Time / čas','M – Mechanism / mechanismus','I – Injuries / poranění','S – Signs / vitální funkce a nálezy','T – Treatment / léčba a efekt'];labels.forEach((l,i)=>{let a=document.createElement('label');a.textContent=l;let b=document.createElement('textarea');b.id='a'+i;b.rows=2;$('fields').append(a,b)});$('finish').onclick=()=>{$('handover').hidden=false;$('handover').scrollIntoView({behavior:'smooth'})};$('atm').onsubmit=e=>{e.preventDefault();ended=true;$('entry').disabled=true;$('handover').hidden=true;$('finish').disabled=true;let checks=[['safe','Bezpečnost'],['bleed','Kontrola masivního krvácení'],['a','Dýchací cesty'],['oxygen','Oxygenoterapie'],['bExam','Vyšetření hrudníku'],['decomp','Řešení suspektního tenzního PNO'],['bp','TK'],['sat','SpO₂'],['monitor','EKG'],['d','Neurologické vyšetření'],['warm','Termomanagement'],['lzs','Zvážení LZS'],['recheck','Reevaluace']];let box=$('report');box.hidden=false;box.replaceChildren();let h=document.createElement('h2');h.textContent='Debriefing · '+stamp();box.append(h);for(let [k,v] of checks){let p=document.createElement('p');p.textContent=(done.has(k)?'✓ ':'○ ')+v;box.append(p)}let p=document.createElement('p');p.textContent='Cílové pracoviště: '+(destination||'nezvoleno')+'. '+(destination==='Traumacentrum'?'Odpovídá podezření na závažné trauma.':'Zvaž přímé směřování do traumacentra dle regionálního postupu.');box.append(p);let q=document.createElement('p');q.textContent='ATMIST: '+labels.filter((_,i)=>$('a'+i).value.trim()).length+'/6 vyplněných polí. Odbornou správnost volného textu musí posoudit instruktor. Prioritou byla časná kontrola krvácení a řešení život ohrožující poruchy ventilace; záznam péče umožňuje posoudit pořadí a prodlevy.';box.append(q);let b=document.createElement('button');b.textContent='Nový výjezd';b.onclick=()=>location.reload();box.append(b);box.scrollIntoView({behavior:'smooth'})};
+let aiReady = false, commandPending = false;
+$('enable-ai').onclick = async () => {
+ const button = $('enable-ai');
+ button.disabled = true;
+ try {
+  await simulatorAI.load(progress => {
+   $('ai-status').textContent = 'Načítání AI… ' + Math.round(progress.progress * 100) + ' %';
+  });
+  aiReady = true;
+  button.hidden = true;
+  $('ai-controls').hidden = false;
+  $('ai-mode').value = 'interpret';
+  $('ai-status').textContent = 'AI je připravena.';
+ } catch (error) {
+  $('ai-status').textContent = navigator.gpu
+   ? 'Model se nepodařilo načíst. Zkus to znovu nebo použij přímé příkazy.'
+   : 'Tento prohlížeč nemá dostupné WebGPU. Použij přímé příkazy.';
+  button.disabled = false;
+ }
+};
+
+$('cmd').onsubmit = async event => {
+ event.preventDefault();
+ if (ended || commandPending) return;
+ const entry = $('entry'), text = entry.value.trim();
+ if (!text) return;
+ entry.value = '';
+ log(text, true);
+ const mode = $('ai-mode').value;
+ if (!aiReady || mode === 'rules') {
+  parseCommands(text).forEach(action);
+  return;
+ }
+ commandPending = true;
+ const submit = $('cmd').querySelector('button');
+ submit.disabled = true;
+ $('finish').disabled = true;
+ $('atm').querySelector('button').disabled = true;
+ try {
+  if (mode === 'interpret') {
+   const commands = await simulatorAI.interpret(text);
+   if (ended) return;
+   if (!commands.length) {
+    log('AI nerozpoznala jednoznačný podporovaný úkon. Upřesni ho nebo použij přímý příkaz.');
+   } else if (window.confirm('Provést navržené úkony v tomto pořadí?\n\n' + commands.join('\n'))) {
+    commands.forEach(action);
+   } else {
+    log('Návrh úkonů zrušen.');
+   }
+  } else {
+   const patient = mode === 'patient';
+   const facts = patient
+    ? ['Muž po dopravní nehodě.', 'Bolí mě hrudník a levá noha.', $('status').textContent]
+    : ['Hlášená dopravní nehoda.', $('resources').textContent];
+   const answer = await simulatorAI.dialogue(patient ? 'pacient' : 'dispečer ZOS', facts, text);
+   if (!ended) log((patient ? 'Pacient (AI)' : 'ZOS (AI)') + ' · ' + answer);
+  }
+ } catch (error) {
+  if (!ended) log('AI odpověď se nepodařila. Zkus dotaz znovu nebo použij přímý příkaz.');
+ } finally {
+  commandPending = false;
+  submit.disabled = ended;
+ $('finish').disabled = ended;
+ $('atm').querySelector('button').disabled = ended;
+ }
+};
+
+async function addAIDebrief(report) {
+ if (!aiReady) return;
+ const section = document.createElement('section');
+ const heading = document.createElement('h3');
+ heading.textContent = 'Rozbor pomocí AI';
+ const body = document.createElement('p');
+ body.setAttribute('role', 'status');
+ body.style.whiteSpace = 'pre-wrap';
+ body.textContent = 'Připravuji rozbor…';
+ section.append(heading, body);
+ report.append(section);
+ const handover = Object.fromEntries(labels.map((label, index) =>
+  [label, $('a' + index).value.trim().slice(0, 300)]));
+ try {
+  body.textContent = await simulatorAI.debrief(events.slice(-50), handover);
+ } catch (error) {
+  body.textContent = 'Rozbor pomocí AI se nepodařilo vytvořit.';
+ }
+}
+
+const labels=['A – Age / věk','T – Time / čas','M – Mechanism / mechanismus','I – Injuries / poranění','S – Signs / vitální funkce a nálezy','T – Treatment / léčba a efekt'];labels.forEach((l,i)=>{let a=document.createElement('label');a.textContent=l;let b=document.createElement('textarea');b.id='a'+i;b.rows=2;$('fields').append(a,b)});$('finish').onclick=()=>{$('handover').hidden=false;$('handover').scrollIntoView({behavior:'smooth'})};$('atm').onsubmit=e=>{e.preventDefault();if(ended||commandPending)return;ended=true;$('entry').disabled=true;$('handover').hidden=true;$('finish').disabled=true;let checks=[['safe','Bezpečnost'],['bleed','Kontrola masivního krvácení'],['a','Dýchací cesty'],['oxygen','Oxygenoterapie'],['bExam','Vyšetření hrudníku'],['decomp','Řešení suspektního tenzního PNO'],['bp','TK'],['sat','SpO₂'],['monitor','EKG'],['d','Neurologické vyšetření'],['warm','Termomanagement'],['lzs','Zvážení LZS'],['recheck','Reevaluace']];let box=$('report');box.hidden=false;box.replaceChildren();let h=document.createElement('h2');h.textContent='Debriefing · '+stamp();box.append(h);for(let [k,v] of checks){let p=document.createElement('p');p.textContent=(done.has(k)?'✓ ':'○ ')+v;box.append(p)}let p=document.createElement('p');p.textContent='Cílové pracoviště: '+(destination||'nezvoleno')+'. '+(destination==='Traumacentrum'?'Odpovídá podezření na závažné trauma.':'Zvaž přímé směřování do traumacentra dle regionálního postupu.');box.append(p);let q=document.createElement('p');q.textContent='ATMIST: '+labels.filter((_,i)=>$('a'+i).value.trim()).length+'/6 vyplněných polí. Odbornou správnost volného textu musí posoudit instruktor. Prioritou byla časná kontrola krvácení a řešení život ohrožující poruchy ventilace; záznam péče umožňuje posoudit pořadí a prodlevy.';box.append(q);void addAIDebrief(box);let b=document.createElement('button');b.textContent='Nový výjezd';b.onclick=()=>location.reload();box.append(b);box.scrollIntoView({behavior:'smooth'})};
 function ctx(){audio ||= new (window.AudioContext||window.webkitAudioContext)();audio.resume();return audio}function beep(){let a=ctx(),o=a.createOscillator(),g=a.createGain();o.frequency.value=650+spo*5;g.gain.setValueAtTime(.045,a.currentTime);g.gain.exponentialRampToValueAtTime(.001,a.currentTime+.09);o.connect(g).connect(a.destination);o.start();o.stop(a.currentTime+.1)}function breath(){if(!sound)return;let a=ctx(),b=a.createBuffer(1,a.sampleRate*3,a.sampleRate),d=b.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*.12*Math.pow(Math.sin(i/d.length*Math.PI*2),2);let src=a.createBufferSource(),f=a.createBiquadFilter();f.type='lowpass';f.frequency.value=550;src.buffer=b;src.connect(f).connect(a.destination);src.start()}$('sound').onclick=()=>{sound=!sound;if(sound)ctx();$('sound').textContent=sound?'Vypnout zvuk monitoru':'Zapnout zvuk monitoru'};let c=$('ecg'),g=c.getContext('2d');function draw(ms){g.fillStyle='#101719';g.fillRect(0,0,700,150);g.strokeStyle='#22352e';g.lineWidth=1;for(let x=0;x<700;x+=20){g.beginPath();g.moveTo(x,0);g.lineTo(x,150);g.stroke()}for(let y=0;y<150;y+=20){g.beginPath();g.moveTo(0,y);g.lineTo(700,y);g.stroke()}if(monitor){let period=60/hr,ga=(p,m,w)=>Math.exp(-(((p-m)/w)**2));g.strokeStyle='#68f28c';g.lineWidth=2;g.beginPath();for(let x=0;x<700;x++){let p=((ms/1000+x/120)%period)/period;let y=85-9*ga(p,.15,.045)+7*ga(p,.29,.018)-55*ga(p,.33,.018)+19*ga(p,.37,.022)-18*ga(p,.65,.10);if(x===0)g.moveTo(x,y);else g.lineTo(x,y)}g.stroke();if(sound&&!ended&&ms-lastBeat>period*1000){lastBeat=ms;beep()}}requestAnimationFrame(draw)}requestAnimationFrame(draw);
 </script></html>
