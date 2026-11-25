@@ -98,7 +98,17 @@ export default async function handler(request, response) {
       return response.status(502).json({ error: 'OpenAI odmítlo přístup. Zkontroluj OPENAI_API_KEY ve Vercelu.' });
     }
     if (result.status === 429) {
-      return response.status(429).json({ error: 'OpenAI dosáhlo limitu. Zkontroluj rozpočet API nebo zkus požadavek později.' });
+      const failure = await result.json().catch(() => null);
+      if (failure?.error?.code === 'insufficient_quota' || failure?.error?.type === 'insufficient_quota') {
+        return response.status(429).json({
+          code: 'insufficient_quota',
+          error: 'Projekt OpenAI nemá dostupnou kvótu. Zkontroluj fakturaci a kredit na platformě OpenAI.',
+        });
+      }
+      return response.status(429).json({
+        code: 'rate_limit',
+        error: 'OpenAI dočasně omezilo počet požadavků. Zkus to za chvíli.',
+      });
     }
     if (result.status === 404) {
       return response.status(502).json({ error: 'Nastavený model OpenAI není pro tento projekt dostupný.' });
