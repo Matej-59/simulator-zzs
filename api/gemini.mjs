@@ -65,6 +65,7 @@ async function readAnswer(result, mode) {
 
 export default async function handler(request, response) {
   response.setHeader('Cache-Control', 'no-store');
+  response.setHeader('X-Simulator-AI', 'gemini');
   if (process.env.VERCEL_GIT_COMMIT_SHA) {
     response.setHeader('X-Simulator-Revision', process.env.VERCEL_GIT_COMMIT_SHA);
   }
@@ -72,6 +73,14 @@ export default async function handler(request, response) {
   if (request.method !== 'POST') {
     response.setHeader('Allow', 'POST');
     return response.status(405).json({ error: 'Použij metodu POST.' });
+  }
+
+  // Gemini generation requests cannot specify a billing tier.
+  if (process.env.GEMINI_FREE_TIER_CONFIRMED !== 'true') {
+    return response.status(503).json({
+      code: 'gemini_free_tier_unconfirmed',
+      error: 'Gemini čeká na potvrzení bezplatného projektu. Základní simulace zůstává dostupná.',
+    });
   }
 
   const secret = process.env.GEMINI_API_KEY?.trim();
