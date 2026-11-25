@@ -82,6 +82,9 @@ const examCommands = {
 };
 
 const interventionCommands = {
+ ecgMonitor: 'Připojení EKG monitoru bez pořízení záznamu',
+ pulseOximeter: 'Připojení pulzního oxymetru',
+ capnographyMonitor: 'Připojení kapnografie',
  oxygenOn: 'Nasazení kyslíku',
  oxygenOff: 'Ukončení podávání kyslíku',
  bleedingControl: 'Kontrola krvácení z poraněného stehna přímým tlakem, tlakovým obvazem nebo turniketem',
@@ -112,6 +115,9 @@ function applyInterventions(ids) {
  for (const id of ids) {
   let reply;
   switch (id) {
+   case 'ecgMonitor': connected.hr = true; break;
+   case 'pulseOximeter': connected.spo = true; break;
+   case 'capnographyMonitor': connected.et = true; break;
    case 'oxygenOn': state.oxygen = true; break;
    case 'oxygenOff': state.oxygen = false; break;
    case 'bleedingControl': state.bleeding = false; break;
@@ -131,7 +137,7 @@ function applyInterventions(ids) {
   if (!reply) {
    const label = id === 'bleedingControl' ? 'Kontrola krvácení ze stehna' : interventionCommands[id];
    actions.push(label);
-   reply = label + ' zaznamenáno.';
+   reply = 'Zaznamenaný úkon: ' + label + '.';
   }
   replies.push(reply);
  }
