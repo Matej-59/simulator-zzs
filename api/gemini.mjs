@@ -6,7 +6,7 @@ export default async function handler(request, response) {
     return response.status(405).json({ error: 'Použij metodu POST.' });
   }
 
-  const secret = process.env.GEMINI_API_KEY;
+  const secret = process.env.GEMINI_API_KEY?.trim();
   if (!secret) {
     return response.status(503).json({ error: 'Gemini ještě není nastavené na serveru.' });
   }
@@ -16,7 +16,7 @@ export default async function handler(request, response) {
     return response.status(400).json({ error: 'Neplatný nebo příliš dlouhý požadavek.' });
   }
 
-  const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+  const model = process.env.GEMINI_MODEL?.trim() || 'gemini-3.1-flash-lite';
   try {
     const result = await fetch(
       'https://generativelanguage.googleapis.com/v1beta/models/' +
@@ -39,7 +39,24 @@ export default async function handler(request, response) {
       return response.status(429).json({ error: 'Gemini vyčerpalo limit. Zkus to později.' });
     }
     if (!result.ok) {
-      return response.status(502).json({ error: 'Gemini odmítlo požadavek. Zkontroluj nastavení služby.' });
+      const failure = await result.json().catch(() => null);
+      const details = failure?.error?.details;
+      const reason = Array.isArray(details) ? details.find(detail =>
+        detail?.['@type'] === 'type.googleapis.com/google.rpc.ErrorInfo'
+      )?.reason : undefined;
+      if (['API_KEY_INVALID', 'API_KEY_EXPIRED'].includes(reason) || result.status === 401) {
+        return response.status(502).json({ error: 'Google odmítl klíč Gemini. Ve Vercelu aktualizuj GEMINI_API_KEY a nasaď projekt znovu.' });
+      }
+      if (result.status === 403) {
+        return response.status(502).json({ error: 'Google zamítl přístup ke Gemini. Zkontroluj, že klíč má povolený přístup ke Gemini API.' });
+      }
+      if (result.status === 404) {
+        return response.status(502).json({ error: 'Nastavený model Gemini není dostupný. Zkontroluj GEMINI_MODEL ve Vercelu.' });
+      }
+      if (failure?.error?.message?.toLowerCase().includes('location is not supported')) {
+        return response.status(502).json({ error: 'Gemini API v oblasti serveru Vercelu není dostupné.' });
+      }
+      return response.status(502).json({ error: 'Gemini odmítlo požadavek (HTTP ' + result.status + ').' });
     }
 
     const data = await result.json();
