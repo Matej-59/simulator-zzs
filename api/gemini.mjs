@@ -1,6 +1,5 @@
 const dialogueConfig = {
   maxOutputTokens: 512,
-  thinkingConfig: { thinkingLevel: 'MINIMAL' },
   responseSchema: {
     type: 'OBJECT',
     properties: {
@@ -20,6 +19,30 @@ const dialogueConfig = {
     required: ['reply', 'history'],
   },
 };
+
+async function generate(model, key, prompt, config, timeout) {
+  return fetch(
+    'https://generativelanguage.googleapis.com/v1beta/models/' +
+      encodeURIComponent(model) + ':generateContent',
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          ...config,
+          ...(model.startsWith('gemini-3') && config.responseSchema
+            ? { thinkingConfig: { thinkingLevel: 'MINIMAL' } } : {}),
+        },
+      }),
+      signal: AbortSignal.timeout(timeout),
+    }
+  );
+}
+
+function retryable(error) {
+  return ['TypeError', 'TimeoutError', 'AbortError'].includes(error?.name);
+}
 
 export default async function handler(request, response) {
   response.setHeader('Cache-Control', 'no-store');
@@ -47,28 +70,25 @@ export default async function handler(request, response) {
     properties: { ids: { type: 'ARRAY', items: { type: 'STRING' } } },
     required: ['ids'],
   };
-  const { thinkingConfig, ...dialogueSchema } = dialogueConfig;
+  const config = {
+    responseMimeType: 'application/json',
+    temperature: 0.2,
+    maxOutputTokens: 4096,
+    ...(dialogue ? dialogueConfig : {}),
+    ...(commands ? { responseSchema: commandSchema, maxOutputTokens: 256 } : {}),
+  };
+  const fallbackModel = model === 'gemini-2.5-flash-lite' ? 'gemini-3.1-flash-lite' : 'gemini-2.5-flash-lite';
   try {
-    const result = await fetch(
-      'https://generativelanguage.googleapis.com/v1beta/models/' +
-        encodeURIComponent(model) + ':generateContent',
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': secret },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            responseMimeType: 'application/json',
-            temperature: 0.2,
-            maxOutputTokens: 4096,
-            ...(dialogue ? dialogueSchema : {}),
-            ...(commands ? { responseSchema: commandSchema, maxOutputTokens: 256 } : {}),
-            ...((dialogue || commands) && model === 'gemini-3.1-flash-lite' ? { thinkingConfig } : {}),
-          },
-        }),
-        signal: AbortSignal.timeout(25_000),
-      }
-    );
+    let result;
+    try {
+      result = await generate(model, secret, prompt, config, 9_000);
+    } catch (error) {
+      if (!retryable(error)) throw error;
+    }
+    if (!result || [408, 500, 502, 503, 504].includes(result.status)) {
+      if (result) await result.body?.cancel().catch(() => {});
+      result = await generate(fallbackModel, secret, prompt, config, 13_000);
+    }
     if (result.status === 429) {
       return response.status(429).json({ error: 'Gemini vyčerpalo limit. Zkus to později.' });
     }
@@ -89,6 +109,9 @@ export default async function handler(request, response) {
       }
       if (failure?.error?.message?.toLowerCase().includes('location is not supported')) {
         return response.status(502).json({ error: 'Gemini API v oblasti serveru Vercelu není dostupné.' });
+      }
+      if (result.status >= 500) {
+        return response.status(503).json({ error: 'Gemini je dočasně nedostupné. Zkus příkaz odeslat znovu.' });
       }
       return response.status(502).json({ error: 'Gemini odmítlo požadavek (HTTP ' + result.status + ').' });
     }
